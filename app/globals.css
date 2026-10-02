@@ -1,0 +1,120 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&display=swap');
+
+:root {
+  --bg-primary: #eef2f6;
+  --bg-surface: #eef2f6;
+  --neu-dark: #c8d3e2;
+  --neu-light: #ffffff;
+  --neu-accent: #2563eb;
+  --neu-accent-hover: #1d4ed8;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --border-subtle: #dbe4ef;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  min-height: 100vh;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+button, input, textarea, select {
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Rich text editor bold accent styling */
+.prose strong, .prose b,
+[contenteditable] strong, [contenteditable] b,
+.editor-bold-colored strong, .editor-bold-colored b {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+/* Neumorphic Bubble Pill (matches user reference screenshot IMG_1896.jpeg) */
+.neu-bubble {
+  background-color: #eef2f6;
+  box-shadow: 4px 4px 12px #c8d3e2, -4px -4px 12px #ffffff;
+  border-radius: 9999px;
+  transition: all 0.2s ease;
+}
+
+.neu-bubble:hover {
+  box-shadow: 5px 5px 14px #bfcbda, -5px -5px 14px #ffffff;
+}
+
+/* Neumorphic shadow classes */
+.neu-flat {
+  background-color: var(--bg-surface);
+  box-shadow: 8px 8px 18px var(--neu-dark), -8px -8px 18px var(--neu-light);
+}
+
+.neu-flat-sm {
+  background-color: var(--bg-surface);
+  box-shadow: 4px 4px 10px var(--neu-dark), -4px -4px 10px var(--neu-light);
+}
+
+.neu-flat-xs {
+  background-color: var(--bg-surface);
+  box-shadow: 2px 2px 6px var(--neu-dark), -2px -2px 6px var(--neu-light);
+}
+
+.neu-pressed {
+  background-color: var(--bg-surface);
+  box-shadow: inset 4px 4px 8px var(--neu-dark), inset -4px -4px 8px var(--neu-light);
+}
+
+.neu-pressed-sm {
+  background-color: var(--bg-surface);
+  box-shadow: inset 2px 2px 5px var(--neu-dark), inset -2px -2px 5px var(--neu-light);
+}
+
+.neu-button {
+  background-color: var(--bg-surface);
+  box-shadow: 5px 5px 12px var(--neu-dark), -5px -5px 12px var(--neu-light);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neu-button:hover {
+  box-shadow: 7px 7px 16px var(--neu-dark), -7px -7px 16px var(--neu-light);
+  transform: translateY(-2px);
+}
+
+.neu-button:active, .neu-button.active {
+  box-shadow: inset 3px 3px 6px var(--neu-dark), inset -3px -3px 6px var(--neu-light);
+  transform: translateY(0);
+}
+
+.neu-accent-btn {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 5px 5px 14px var(--neu-dark), -5px -5px 14px var(--neu-light);
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.neu-accent-btn:hover {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+  box-shadow: 6px 6px 18px var(--neu-dark), -6px -6px 18px var(--neu-light);
+  transform: translateY(-2px);
+}
+
+.neu-accent-btn:active {
+  box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.35);
+  transform: translateY(0);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--neu-dark);
+  border-radius: 9999px;
+}
+
