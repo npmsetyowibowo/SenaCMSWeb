@@ -6,10 +6,10 @@ import {
   getArticleBySlug,
   getRelatedArticles,
   getArticles,
-  incrementArticleViews,
   getSettings,
 } from '@/lib/db';
 import { RelatedPosts } from '@/components/RelatedPosts';
+import { ArticleViewTracker } from '@/components/ArticleViewTracker';
 import {
   Calendar,
   Clock,
@@ -84,9 +84,6 @@ export default async function BlogDetailPage({
   if (!article) {
     notFound();
   }
-
-  // Increment views
-  await incrementArticleViews(article.id);
 
   const [related, allArticlesRes, settings] = await Promise.all([
     getRelatedArticles(article.id, article.category_id, 3),
@@ -178,6 +175,7 @@ export default async function BlogDetailPage({
 
   return (
     <article className="py-10 sm:py-16 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <ArticleViewTracker articleId={article.id} />
       {/* Structured Data Script */}
       <script
         type="application/ld+json"
