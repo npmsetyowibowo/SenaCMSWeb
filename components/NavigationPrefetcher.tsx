@@ -14,7 +14,7 @@ export function NavigationPrefetcher() {
 
   useEffect(() => {
     const prefetched = new Set<string>();
-    let idleId: number | undefined;
+    let timerId: ReturnType<typeof setTimeout> | undefined;
     let observer: MutationObserver | undefined;
 
     const normalize = (href: string) => {
@@ -49,11 +49,8 @@ export function NavigationPrefetcher() {
     };
 
     const scheduleScan = () => {
-      if ('requestIdleCallback' in window) {
-        idleId = window.requestIdleCallback(scan, { timeout: 1200 });
-      } else {
-        idleId = window.setTimeout(scan, 250);
-      }
+      if (timerId !== undefined) clearTimeout(timerId);
+      timerId = setTimeout(scan, 250);
     };
 
     const handlePointer = (event: Event) => {
@@ -78,12 +75,8 @@ export function NavigationPrefetcher() {
       document.removeEventListener('touchstart', handlePointer);
       document.removeEventListener('pointerdown', handlePointer);
       observer?.disconnect();
-      if (idleId !== undefined) {
-        if ('cancelIdleCallback' in window) {
-          window.cancelIdleCallback(idleId);
-        } else {
-          window.clearTimeout(idleId);
-        }
+      if (timerId !== undefined) {
+        clearTimeout(timerId);
       }
     };
   }, [router]);
