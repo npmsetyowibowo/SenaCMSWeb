@@ -3,7 +3,6 @@ import './globals.css';
 import { getSettings } from '@/lib/db';
 import { ToastProvider } from '@/components/Toast';
 import { PublicLayoutChrome } from '@/components/PublicLayoutChrome';
-import { NavigationPrefetcher } from '@/components/NavigationPrefetcher';
 
 // Settings and public content are managed from the CMS, so always render with fresh DB data.
 export const dynamic = 'force-dynamic';
@@ -15,6 +14,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const description = settings.site_description || 'Jasa pembuatan website profesional, modern Neumorphic, SEO-friendly, dan responsif untuk UMKM, Company Profile, dan Bisnis Indonesia.';
   const domain = settings.site_domain || 'https://senaweb.id';
   const favicon = settings.site_favicon || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=64&auto=format&fit=crop&q=80';
+  const rawLogo = settings.site_logo || favicon;
+  const logoUrl = rawLogo.startsWith('http://') || rawLogo.startsWith('https://')
+    ? rawLogo
+    : new URL(rawLogo, domain).toString();
 
   return {
     metadataBase: new URL(domain),
@@ -48,10 +51,8 @@ export async function generateMetadata(): Promise<Metadata> {
       type: 'website',
       images: [
         {
-          url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&auto=format&fit=crop&q=80',
-          width: 1200,
-          height: 630,
-          alt: `${siteName} – ${siteTagline}`,
+          url: logoUrl,
+          alt: `${siteName} logo`,
         },
       ],
     },
@@ -60,7 +61,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: `${siteName} – ${siteTagline}`,
       description,
       creator: '@senaweb_id',
-      images: ['https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&auto=format&fit=crop&q=80'],
+      images: [logoUrl],
     },
   };
 }
@@ -136,7 +137,6 @@ export default async function RootLayout({
       </head>
       <body className="min-h-screen flex flex-col antialiased">
         <ToastProvider>
-          <NavigationPrefetcher />
           <PublicLayoutChrome
             siteName={siteName}
             siteTagline={siteTagline}
