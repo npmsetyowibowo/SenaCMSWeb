@@ -41,7 +41,7 @@ export async function loginUser(username: string, password: string): Promise<{ s
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: false, // Ensure cookies work across all reverse proxies and previews
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60, // 7 days
     path: '/',
