@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
-import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 import { DatabaseSchema, Article, Category, Tag, Portfolio, Testimonial, PricingPlan, FAQ, Media, Page, Inquiry, TrafficLog, User, Session, SeoMetadata, CityLanding } from './types';
 import { getInitialSeedData, getInitialCities } from './seed';
 
@@ -39,43 +40,60 @@ async function ensureDatabase(): Promise<void> {
 }
 
 /**
- * Request-scoped cache: semua getter CMS dalam satu request memakai
- * snapshot database yang sama, sehingga tidak melakukan SELECT berulang.
+ * Persistent Next.js Data Cache:
+ * public requests reuse the same CMS snapshot instead of querying
+ * PostgreSQL on every navigation. CMS writes invalidate this cache.
  */
-export const getDb = cache(async (): Promise<DatabaseSchema> => {
-  await ensureDatabase();
+const getCachedDb = unstable_cache(
+  async (): Promise<DatabaseSchema> => {
+    await ensureDatabase();
 
-  const result = await pool.query(
-    'SELECT data FROM senaweb_state WHERE id = 1 LIMIT 1'
-  );
-
-  if (result.rows.length === 0) {
-    const seed = getInitialSeedData();
-    if (!seed.cities) seed.cities = getInitialCities();
-
-    await pool.query(
-      `INSERT INTO senaweb_state (id, data)
-       VALUES (1, $1::jsonb)
-       ON CONFLICT (id) DO NOTHING`,
-      [JSON.stringify(seed)]
-    );
-
-    const inserted = await pool.query(
+    const result = await pool.query(
       'SELECT data FROM senaweb_state WHERE id = 1 LIMIT 1'
     );
 
-    return (inserted.rows[0]?.data || seed) as DatabaseSchema;
+    if (result.rows.length === 0) {
+      const seed = getInitialSeedData();
+      if (!seed.cities) seed.cities = getInitialCities();
+
+      await pool.query(
+        `INSERT INTO senaweb_state (id, data)
+         VALUES (1, $1::jsonb)
+         ON CONFLICT (id) DO NOTHING`,
+        [JSON.stringify(seed)]
+      );
+
+      const inserted = await pool.query(
+        'SELECT data FROM senaweb_state WHERE id = 1 LIMIT 1'
+      );
+
+      return (inserted.rows[0]?.data || seed) as DatabaseSchema;
+    }
+
+    const db = result.rows[0].data as DatabaseSchema;
+
+    if (!db.cities) {
+      db.cities = getInitialCities();
+      await pool.query(
+        `UPDATE senaweb_state
+         SET data = $1::jsonb, updated_at = NOW()
+         WHERE id = 1`,
+        [JSON.stringify(db)]
+      );
+    }
+
+    return db;
+  },
+  ['senaweb-db'],
+  {
+    revalidate: 300,
+    tags: ['senaweb-db'],
   }
+);
 
-  const db = result.rows[0].data as DatabaseSchema;
-
-  if (!db.cities) {
-    db.cities = getInitialCities();
-    await saveDb(db);
-  }
-
-  return db;
-});
+export async function getDb(): Promise<DatabaseSchema> {
+  return getCachedDb();
+}
 
 export async function saveDb(db: DatabaseSchema): Promise<void> {
   await ensureDatabase();
@@ -87,6 +105,9 @@ export async function saveDb(db: DatabaseSchema): Promise<void> {
      DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
     [JSON.stringify(db)]
   );
+
+  // Invalidate the persistent public-data cache after every CMS write.
+  revalidateTag('senaweb-db');
 }
 
 // ----------------- USERS & AUTH -----------------
