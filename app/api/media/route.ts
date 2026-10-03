@@ -1,15 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import crypto from 'crypto';
 import { getMediaList, addMedia } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
+function getStorageConfig() {
+  const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/$/, '');
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'senaweb-media';
 
-function ensureUploadDirectory() {
-  if (!fs.existsSync(UPLOAD_DIR)) {
-    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY wajib diset di environment Vercel.');
   }
+
+  return { supabaseUrl, serviceRoleKey, bucket };
+}
+
+function sanitizeFileName(name: string) {
+  return name
+    .normalize('NFKD')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/_+/g, '_')
+    .slice(0, 160);
 }
 
 export async function GET() {
@@ -17,7 +28,8 @@ export async function GET() {
     const list = await getMediaList();
     return NextResponse.json(list);
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('Media GET error:', err);
+    return NextResponse.json({ error: err.message || 'Gagal mengambil media' }, { status: 500 });
   }
 }
 
@@ -28,7 +40,6 @@ export async function POST(req: NextRequest) {
 
     const contentType = req.headers.get('content-type') || '';
 
-    // Check if multipart form data (file upload)
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
       const file = formData.get('file') as File | null;
@@ -38,16 +49,21 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Tidak ada file yang diunggah' }, { status: 400 });
       }
 
-      // MIME Validation
-      const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+      const allowedMimes = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/gif',
+        'image/svg+xml',
+      ];
+
       if (!allowedMimes.includes(file.type)) {
         return NextResponse.json(
-          { error: `Tipe file '${file.type}' tidak didukung. Harap unggah gambar JPG, PNG, WebP, atau SVG.` },
+          { error: `Tipe file '${file.type}' tidak didukung. Harap unggah JPG, PNG, WebP, GIF, atau SVG.` },
           { status: 400 }
         );
       }
 
-      // Max size validation (5MB)
       const maxSizeBytes = 5 * 1024 * 1024;
       if (file.size > maxSizeBytes) {
         return NextResponse.json(
@@ -56,17 +72,34 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      ensureUploadDirectory();
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const uniqueFileName = `${Date.now()}_${sanitizedName}`;
-      const filePath = path.join(UPLOAD_DIR, uniqueFileName);
+      const { supabaseUrl, serviceRoleKey, bucket } = getStorageConfig();
+      const safeName = sanitizeFileName(file.name) || 'image';
+      const objectPath = `media/${Date.now()}_${crypto.randomUUID()}_${safeName}`;
 
-      fs.writeFileSync(filePath, buffer);
-      const fileUrl = `/uploads/${uniqueFileName}`;
+      const uploadResponse = await fetch(
+        `${supabaseUrl}/storage/v1/object/${encodeURIComponent(bucket)}/${objectPath}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${serviceRoleKey}`,
+            apikey: serviceRoleKey,
+            'Content-Type': file.type || 'application/octet-stream',
+            'x-upsert': 'false',
+          },
+          body: await file.arrayBuffer(),
+          cache: 'no-store',
+        }
+      );
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        throw new Error(`Supabase Storage upload gagal (${uploadResponse.status}): ${errorText}`);
+      }
+
+      const fileUrl = `${supabaseUrl}/storage/v1/object/public/${encodeURIComponent(bucket)}/${objectPath}`;
 
       const mediaEntry = await addMedia({
-        filename: uniqueFileName,
+        filename: objectPath,
         original_name: file.name,
         mime_type: file.type,
         size_bytes: file.size,
@@ -77,15 +110,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(mediaEntry, { status: 201 });
     }
 
-    // Direct JSON URL upload
     const body = await req.json();
     const { url, alt_text, name } = body;
+
     if (!url) {
       return NextResponse.json({ error: 'URL gambar wajib diisi' }, { status: 400 });
     }
 
     const mediaEntry = await addMedia({
-      filename: (name || 'external-image').replace(/[^a-zA-Z0-9.-]/g, '_'),
+      filename: sanitizeFileName(name || 'external-image'),
       original_name: name || 'external-image',
       mime_type: 'image/jpeg',
       size_bytes: 120000,
@@ -96,6 +129,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(mediaEntry, { status: 201 });
   } catch (err: any) {
     console.error('Upload media error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Upload media gagal' }, { status: 500 });
   }
 }
