@@ -1,6 +1,5 @@
 import { Pool } from 'pg';
-import { unstable_cache } from 'next/cache';
-import { revalidateTag } from 'next/cache';
+import { unstable_cache, revalidateTag } from 'next/cache';
 import { DatabaseSchema, Article, Category, Tag, Portfolio, Testimonial, PricingPlan, FAQ, Media, Page, Inquiry, TrafficLog, User, Session, SeoMetadata, CityLanding } from './types';
 import { getInitialSeedData, getInitialCities } from './seed';
 
@@ -40,9 +39,9 @@ async function ensureDatabase(): Promise<void> {
 }
 
 /**
- * Persistent Next.js Data Cache:
- * public requests reuse the same CMS snapshot instead of querying
- * PostgreSQL on every navigation. CMS writes invalidate this cache.
+ * Persistent Next.js Data Cache. Public pages are dynamic because CMS data
+ * can change, but the underlying JSONB snapshot does not need a PostgreSQL
+ * round-trip on every navigation. CMS writes invalidate this cache.
  */
 const getCachedDb = unstable_cache(
   async (): Promise<DatabaseSchema> => {
@@ -106,7 +105,6 @@ export async function saveDb(db: DatabaseSchema): Promise<void> {
     [JSON.stringify(db)]
   );
 
-  // Invalidate the persistent public-data cache after every CMS write.
   revalidateTag('senaweb-db');
 }
 
