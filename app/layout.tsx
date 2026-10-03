@@ -124,6 +124,11 @@ export default async function RootLayout({
       <head>
         <meta name="color-scheme" content="light" />
         <script
+          dangerouslySetInnerHTML={{
+            __html: `document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light';try{localStorage.removeItem('sena_theme')}catch(e){}`,
+          }}
+        />
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
