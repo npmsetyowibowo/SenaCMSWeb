@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 import { getArticles, getCategories, getTags, getPortfolioList, getPages, getSettings, getCities } from '@/lib/db';
 
 export async function GET() {
