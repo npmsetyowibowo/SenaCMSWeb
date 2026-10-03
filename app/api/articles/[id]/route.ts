@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getArticleById, updateArticle, deleteArticle } from '@/lib/db';
+import { getArticleById, updateArticle, deleteArticle, incrementArticleViews } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { analyzeSeo } from '@/lib/seo-analyzer';
 
@@ -16,6 +16,31 @@ export async function GET(
     return NextResponse.json(article);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const articleId = parseInt(id, 10);
+    if (!Number.isFinite(articleId)) {
+      return NextResponse.json({ error: 'ID artikel tidak valid' }, { status: 400 });
+    }
+
+    const body = await req.json().catch(() => ({}));
+    if (body.action !== 'view') {
+      return NextResponse.json({ error: 'Aksi tidak valid' }, { status: 400 });
+    }
+
+    await incrementArticleViews(articleId);
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error('Article view error:', err);
+    return NextResponse.json({ error: 'Gagal mencatat view' }, { status: 500 });
   }
 }
 
