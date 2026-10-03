@@ -3,6 +3,7 @@ import './globals.css';
 import { getSettings } from '@/lib/db';
 import { ToastProvider } from '@/components/Toast';
 import { PublicLayoutChrome } from '@/components/PublicLayoutChrome';
+import { NavigationPrefetcher } from '@/components/NavigationPrefetcher';
 
 // Settings and public content are managed from the CMS, so always render with fresh DB data.
 export const dynamic = 'force-dynamic';
@@ -135,6 +136,7 @@ export default async function RootLayout({
       </head>
       <body className="min-h-screen flex flex-col antialiased">
         <ToastProvider>
+          <NavigationPrefetcher />
           <PublicLayoutChrome
             siteName={siteName}
             siteTagline={siteTagline}
